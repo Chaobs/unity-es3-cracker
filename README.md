@@ -115,7 +115,7 @@ unity-es3-cracker/
 │   ├── extract_strings.ps1  # PowerShell bridge that invokes dnlib
 │   └── pycryptodome/        # Bundled pycryptodome (Crypto package)
 └── docs/
-    ├── USAGE.md             # Detailed usage guide
+    ├── USAGE.md             # Detailed usage guide (EN/中文)
     └── DEVELOPMENT.md       # Development & algorithm notes
 ```
 

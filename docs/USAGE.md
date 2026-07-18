@@ -1,3 +1,170 @@
+# Usage Guide (Detailed)
+
+This guide walks first-time users through cracking a Unity Easy Save 3 encrypted save with this tool.
+
+---
+
+## Prerequisites
+
+- This tool targets **Easy Save 3 (ES3)** AES-encrypted saves (usually `.es3` files).
+- The encryption password is **set by the game developer**. Common locations:
+  - A string constant in the game's C# code (recovered by extracting DLL string literals with dnlib);
+  - An `ES3Defaults` `ScriptableObject` serialized inside a Unity `.assets` bundle (most common);
+  - Or simply the ES3 default `"password"`.
+- The tool automatically gathers strings from all of the above locations in the game directory you provide, builds a candidate list, and tries each one.
+
+## Installation
+
+No installation is required — dependencies are bundled:
+
+```bash
+git clone https://github.com/Chaobs/unity-es3-cracker.git
+cd unity-es3-cracker
+python main.py
+```
+
+Requirements:
+- Python 3.8+ (3.11+ recommended).
+- Windows is recommended: dnlib runs through a PowerShell bridge. On non-Windows the tool auto-falls back to byte scanning (it only loses DLL literal extraction).
+- `pycryptodome` and `dnlib.dll` are already bundled in `libs/`, so no `pip install` is needed.
+
+If your Python version is incompatible with the bundled `pycryptodome` (rare), reinstall manually:
+
+```bash
+pip install -r requirements.txt
+```
+
+## GUI operation
+
+### 1. Launch
+
+```bash
+cd unity-es3-cracker
+python main.py
+```
+
+If you get a "tkinter not found" error, use a full Python installation (tkinter ships with the standard library and normally needs no extra install).
+
+### 2. Select the game directory (recommended)
+
+Click **Browse...** next to "Game directory" and pick the game's install root, e.g.:
+
+```
+D:\GamesPirated\NTR Soccer ver.1.0.1
+```
+
+The tool recursively scans `*.dll` and `*.assets` files there to build candidate passwords.
+
+> If you are unsure of the directory, leave it empty — only the built-in common-password dictionary will be used (lower hit rate).
+
+### 3. Select save files
+
+Click **Select...** next to "Save files" and pick one or more `.es3` files in the dialog, e.g.:
+
+```
+C:\Users\<you>\AppData\LocalLow\<vendor>\<game>\save3.es3
+```
+
+Selected paths appear in the main input box (multiple files separated by `;`).
+
+### 4. Start cracking
+
+Click **Start Crack**. Then:
+- The progress bar switches to an indeterminate animation and the status bar shows "Scanning candidates / cracking...";
+- The log area prints the files being scanned and any hits in real time;
+- Duration depends on the number of candidates (tens of thousands to ~100k+; usually tens of seconds to a few minutes).
+
+### 5. View results
+
+When cracking finishes:
+- The result tree on the left groups hits by save file, listing the **recovered password** and its confidence score;
+- Select a password row to see the **decrypted preview** (first 2000 characters of the ES3 custom format) on the right;
+- You can **click a password row** or **right-click it** to copy the password directly to the clipboard, or select it and click **Copy selected password**.
+
+> If a file shows "password not found": provide the correct game directory (broader candidates), or manually add the suspected password to `DEFAULT_PASSWORDS` in `src/candidates.py` and retry.
+
+### Language
+
+The GUI defaults to English. Use the one-click language toggle button at the top-right to switch between English and 中文; all UI text, labels, hints, logs and results refresh instantly. The toggle state lives only in memory for the current run and resets to English on the next launch.
+
+## CLI usage
+
+For batch, automation, or headless environments:
+
+```bash
+# Specify a game directory and crack multiple saves
+python -m src.cli --game-dir "D:/Games/NTR Soccer" --saves save1.es3 save2.es3
+
+# Crack a single save with the built-in dictionary only
+python -m src.cli --saves save3.es3
+
+# Output as JSON (easy to parse in scripts)
+python -m src.cli --saves save3.es3 --json
+
+# Switch the output language
+python -m src.cli --lang zh --saves save3.es3
+```
+
+Sample output:
+
+```
+Total candidates: 109069
+
+File: save3.es3
+  size=15536  IV=8c861a80083d0866...  encrypted=True
+  password found: mypassword  (confidence 4, AES-128)
+  preview: { "key_dialogueData" : { "__type" : "string", "value" : ...
+```
+
+CLI options:
+- `--game-dir PATH` — game install root used to harvest candidate passwords (optional).
+- `--saves PATH [PATH ...]` — one or more `.es3` files to crack (required).
+- `--json` — emit results as JSON (keys stay English for parse stability).
+- `--lang en|zh` — output language (default `en`).
+
+## Modifying a save after cracking
+
+Once you have the password, you can edit the save content (example: change the gold field; field names vary per game):
+
+1. Decrypt with the `es3_crypto` module:
+
+   ```python
+   import sys; sys.path.insert(0, 'src')
+   import es3_crypto
+   data = es3_crypto.load_save('save3.es3')
+   pt, ks = es3_crypto.decrypt_raw(data, 'mypassword')
+   text = pt.decode('utf-8')          # ES3 custom JSON text
+   ```
+
+2. Edit the target field textually (e.g. `key_playerMoney`'s `"value" : 7750`) to the desired value;
+   **keep the `__type` tag and the numeric type** (write `9999999.0` for float, `999999` for int).
+
+3. Re-encrypt (you **must reuse the original IV** so the key stays the same):
+
+   ```python
+   iv = data[:16]
+   new_data = es3_crypto.encrypt(text.encode('utf-8'), 'mypassword', iv=iv)
+   open('save3.es3', 'wb').write(new_data)
+   ```
+
+> Always back up the original save before editing. Different games have very different field structures; blindly editing nested structures (items/dialogue) risks corrupting the save.
+
+## FAQ
+
+**Q: Scanning is slow?**
+A: `.assets` files can be very large (100+ MB), and the regex scan is inherently slow — this is normal. Be patient, or provide only the key sub-directory as the game directory.
+
+**Q: Can I use this on non-Windows?**
+A: Yes. DLL literal extraction relies on PowerShell + dnlib (Windows-only) and will auto-fall back to byte scanning, losing only the DLL-string source; `.assets` scanning and the built-in dictionary still work.
+
+**Q: What does the confidence score mean?**
+A: For each candidate, the cracker scores the decryption — readable plaintext containing ES3 markers (`__type`/`key_`) scores high (≥3 is a reliable hit), while random mis-decryptions score low and are filtered out. The highest-scoring password is the answer.
+
+**Q: Is this legal / safe to use?**
+A: Use it only on single-player games and saves you own, for personal purposes like save editing, local backup/restore, and offline analysis. Do not use it on online/multiplayer titles or in any way that violates a game's Terms of Service.
+
+---
+
 # 使用指南（详细）
 
 本文档面向首次使用者，逐步演示如何用本工具破解 Unity Easy Save 3 加密存档。
