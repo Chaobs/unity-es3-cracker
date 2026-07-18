@@ -117,6 +117,11 @@ class CrackerApp:
                                  height=12)
         self.tree.pack(fill="both", expand=True)
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
+        # Click-to-copy (left click on a password row) + right-click menu.
+        self.ctx_menu = tk.Menu(self.tree, tearoff=0)
+        self.ctx_menu.add_command(label=tr("ctx_copy"), command=self._copy_from_menu)
+        self.tree.bind("<Button-1>", self._on_left_click)
+        self.tree.bind("<Button-3>", self._on_right_click)
         paned.add(left, weight=1)
 
         # right: decrypted preview + log
@@ -167,6 +172,7 @@ class CrackerApp:
         self.tree.column("#0", width=200)
         self.tree.column("pw", width=180)
         self.tree.column("score", width=60)
+        self.ctx_menu.entryconfig(0, label=tr("ctx_copy"))
         self.lbl_preview.config(text=tr("preview_label"))
 
         # Log frame
@@ -314,10 +320,64 @@ class CrackerApp:
         for item in sel:
             vals = self.tree.item(item, "values")
             if len(vals) >= 2 and vals[1] not in ("", "-"):
-                self.root.clipboard_clear()
-                self.root.clipboard_append(vals[0])
-                self._log("log_copied", vals[0])
+                self._copy_password(vals[0])
                 return
+
+    # ------------------------------------------------------------------ #
+    # Copy helpers (click / right-click / button) with feedback
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _is_pw_row(vals):
+        return len(vals) >= 2 and vals[1] not in ("", "-")
+
+    def _copy_password(self, text):
+        """Copy ``text`` to the clipboard and report success / failure.
+
+        Feedback is shown both in the status bar and the log so the user gets
+        an immediate, durable confirmation in either language.
+        """
+        if not text:
+            return False
+        try:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(text)
+        except Exception as ex:
+            self.var_status.set(tr("status_copy_fail", str(ex)))
+            self._log("log_copy_fail", str(ex))
+            return False
+        self.var_status.set(tr("status_copied", text))
+        self._log("log_copied", text)
+        return True
+
+    def _on_left_click(self, event):
+        """Left-click a password row -> copy it to the clipboard."""
+        item = self.tree.identify_row(event.y)
+        if not item:
+            return
+        vals = self.tree.item(item, "values")
+        if self._is_pw_row(vals):
+            self._copy_password(vals[0])
+
+    def _on_right_click(self, event):
+        """Right-click a password row -> select it and pop the copy menu."""
+        item = self.tree.identify_row(event.y)
+        if not item:
+            return
+        vals = self.tree.item(item, "values")
+        if self._is_pw_row(vals):
+            self.tree.selection_set(item)
+            try:
+                self.ctx_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                self.ctx_menu.grab_release()
+
+    def _copy_from_menu(self):
+        sel = self.tree.selection()
+        if not sel:
+            return
+        vals = self.tree.item(sel[0], "values")
+        if self._is_pw_row(vals):
+            self._copy_password(vals[0])
 
     def _finish(self):
         self.cracking = False

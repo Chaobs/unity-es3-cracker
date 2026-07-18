@@ -37,6 +37,8 @@ _EN = {
     "status_ready": "Ready",
     "status_working": "Scanning candidates / cracking...",
     "status_done": "Done",
+    "status_copied": "Password copied: %s",
+    "status_copy_fail": "Copy failed: %s",
     "frame_result": "Crack Results",
     "tree_file": "Save File",
     "tree_pw": "Password",
@@ -54,6 +56,7 @@ _EN = {
     "warn_no_input": "Missing input",
     "warn_no_input_msg": "Please select at least one valid save file first.",
     "err_run": "Runtime error",
+    "ctx_copy": "Copy Password",
 
     # --- Tree node placeholders (password column) ---
     "tree_file_node": "(file)",
@@ -69,6 +72,7 @@ _EN = {
                  "or a custom password)",
     "log_hit": "    -> Password found: %s (score %d)",
     "log_copied": "Copied password: %s",
+    "log_copy_fail": "Copy failed: %s",
     "log_done": "Done.",
     "log_progress": "[%s] %d/%d  %s",
     "log_phase_scan": "scan",
@@ -103,6 +107,8 @@ _ZH = {
     "status_ready": "就绪",
     "status_working": "正在扫描候选密码 / 破解中...",
     "status_done": "完成",
+    "status_copied": "密码已复制: %s",
+    "status_copy_fail": "复制失败: %s",
     "frame_result": "破解结果",
     "tree_file": "存档文件",
     "tree_pw": "密码",
@@ -120,6 +126,7 @@ _ZH = {
     "warn_no_input": "缺少输入",
     "warn_no_input_msg": "请先选择至少一个有效的存档文件。",
     "err_run": "运行错误",
+    "ctx_copy": "复制密码",
 
     # --- Tree node placeholders (password column) ---
     "tree_file_node": "(文件)",
@@ -134,6 +141,7 @@ _ZH = {
     "log_no_pw": "    -> 未找到密码 (可尝试提供更多游戏目录或自定义密码)",
     "log_hit": "    -> 命中密码: %s (置信度 %d)",
     "log_copied": "已复制密码: %s",
+    "log_copy_fail": "复制失败: %s",
     "log_done": "完成。",
     "log_progress": "[%s] %d/%d  %s",
     "log_phase_scan": "扫描候选",
