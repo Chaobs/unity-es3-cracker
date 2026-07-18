@@ -15,3 +15,8 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# PyInstaller build artifacts
+build/
+dist/
+*.selftest.txt

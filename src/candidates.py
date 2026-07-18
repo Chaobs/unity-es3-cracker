@@ -42,6 +42,12 @@ _SKIP_DIR_HINTS = ("streamingassets", "plugin", "mono", "managed", "il2cpp")
 # Source 2: game DLLs via dnlib
 # --------------------------------------------------------------------------- #
 def _dnlib_ps1_path():
+    # When frozen by PyInstaller, bundled data lives under sys._MEIPASS.
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        p = os.path.join(meipass, "libs", "extract_strings.ps1")
+        if os.path.exists(p):
+            return p
     here = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(here, "..", "libs", "extract_strings.ps1")
 

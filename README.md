@@ -72,6 +72,22 @@ If your Python version is incompatible with the bundled `pycryptodome` (rare), r
 pip install -r requirements.txt
 ```
 
+## Standalone executable (no Python required)
+
+A single-file Windows build is provided so you can run the cracker without
+installing Python or any third-party library.
+
+1. Go to the [Releases page](https://github.com/Chaobs/unity-es3-cracker/releases).
+2. Download `UnityES3Cracker.exe` from the **latest** release.
+3. Double-click to launch — no installation step needed.
+
+**System requirements:** Windows 10 / 11, 64-bit.
+The `.exe` is fully self-contained: `dnlib.dll`, `pycryptodome` and the
+Tcl/Tk runtime are all bundled inside it.
+
+**Usage:** identical to the GUI described below — pick a game directory and
+`.es3` files, click **Start Crack**, then copy the recovered password.
+
 ## Usage
 
 ### GUI
@@ -214,6 +230,21 @@ python main.py
 ```bash
 pip install -r requirements.txt
 ```
+
+---
+
+## 独立可执行文件（无需 Python）
+
+我们提供单文件 Windows 版本，无需安装 Python 或任何第三方库即可直接运行。
+
+1. 前往 [Releases 发布页](https://github.com/Chaobs/unity-es3-cracker/releases)；
+2. 下载**最新发布**中的 `UnityES3Cracker.exe`；
+3. 双击即可启动，无需任何安装步骤。
+
+**系统要求**：Windows 10 / 11，64 位。
+该 `.exe` 为完全自包含文件：已内置 `dnlib.dll`、`pycryptodome` 以及 Tcl/Tk 运行环境，无需另行安装。
+
+**使用方式**：与上方图形界面完全一致——选择游戏目录与 `.es3` 文件，点击「开始破解」，再复制命中的密码即可。
 
 ---
 
