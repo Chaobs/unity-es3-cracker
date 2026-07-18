@@ -1,3 +1,135 @@
+# Unity Easy Save 3 Save Password Cracker
+
+A graphical / command-line tool to **reverse-engineer and recover the encryption password** of Unity game save files created with the **Easy Save 3 (ES3)** plugin. It automatically harvests candidate passwords from the game directory, brute-forces the AES key that protects `.es3` saves, and shows a decrypted preview of the contents.
+
+> ⚠️ **For single-player games and saves you own only.** Do not use this on online / multiplayer titles, or in any way that violates a game's Terms of Service or infringes on others' rights. This tool is intended for legitimate personal use: save editing, local backup / restore, and offline analysis.
+
+---
+
+## Features
+
+- **GUI (Tkinter):** select a game directory and save files, one-click crack, with live progress and log.
+- **Batch processing:** select multiple `.es3` files at once.
+- **Automatic candidate harvesting:**
+  1. A built-in dictionary of common ES3 / Unity passwords;
+  2. **dnlib** parses the game's `.dll` and extracts C# string literals (the most likely place a password lives);
+  3. Scans Unity `.assets` bundles for plaintext strings (ES3's default encryption password is often serialized as a `ScriptableObject` inside the assets).
+- **Accurate algorithm:** faithfully reproduces ES3 encryption (AES-128/256-CBC, PBKDF2-HMAC-SHA1, salt = file IV). See "How it works" below.
+- **Decrypted preview:** on success, shows the first 2000 characters of the decrypted save (ES3's custom serialization format).
+- **CLI mode:** for batch / automation / headless environments.
+- **Bilingual (English / 中文):** defaults to English. The GUI has a one-click toggle (top-right); the CLI switches via `--lang en|zh`.
+
+## Bilingual
+
+| Entry | Default | Switch |
+| --- | --- | --- |
+| GUI | English | One-click toggle button (top-right) — all UI text, labels, hints, logs and results refresh instantly |
+| CLI | English | `--lang zh` outputs Simplified Chinese; `--lang en` (default) outputs English |
+
+> The GUI language state lives only in memory for the current run; it resets to English on every launch.
+
+## How it works
+
+ES3's AES encryption format (reverse-engineered from the game assembly, confirmed at the instruction level):
+
+```
+IV   = first 16 bytes of the save file (random per file)
+Key  = PBKDF2-HMAC-SHA1(password, salt = IV, iterations = 100, dklen = 16)   # AES-128
+file = IV || AES-CBC(Key, IV).Encrypt(PKCS7(plaintext))
+```
+
+The key trap: **the salt is not a fixed string — it is the file's own IV.** Every save file therefore derives a different key, and deriving with a "fixed salt" never opens the file. This is the biggest gap between many online ES3 examples and real game implementations.
+
+Cracking flow:
+
+1. Read the save → parse the header (size, IV, whether it looks encrypted);
+2. Build the candidate set from the game directory (DLL literals + `.assets` strings + built-in dictionary);
+3. For each candidate: `decrypt → PKCS7 check → plaintext readability / ES3 marker detection`;
+4. The candidate that passes validation with the highest confidence score wins.
+
+## Requirements
+
+| Component | Notes |
+|-----------|-------|
+| Python | 3.8+ (3.11+ recommended) |
+| OS | Windows (dnlib is invoked through a PowerShell bridge; on non-Windows it auto-falls back to byte scanning, losing only the DLL literal extraction) |
+| `pycryptodome` | bundled in `libs/pycryptodome/`, no manual install needed |
+| `dnlib.dll` | bundled in `libs/dnlib.dll` (open-source .NET assembly parser) |
+
+## Installation
+
+No installation required — dependencies are bundled:
+
+```bash
+git clone https://github.com/Chaobs/unity-es3-cracker.git
+cd unity-es3-cracker
+python main.py
+```
+
+If your Python version is incompatible with the bundled `pycryptodome` (rare), reinstall manually:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+### GUI
+
+```bash
+python main.py
+```
+
+1. **Game directory:** click "Browse" to select the game's install root (used to harvest candidate passwords). Leave it empty to use only the built-in common passwords.
+2. **Save files:** click "Select" to choose one or more `.es3` files (batch supported).
+3. Click **Start Crack** and wait for the progress bar and log to finish.
+4. The results panel lists each save's **recovered password** (sorted by confidence); click an entry to see the **decrypted preview** on the right.
+5. Select a password and click **Copy selected password** to use it (e.g. with an ES3 editor or your own script to modify the save). You can also click or right-click a password row to copy it directly.
+
+### CLI
+
+```bash
+# Game directory + multiple saves
+python -m src.cli --game-dir "D:/Games/NTR Soccer" --saves save1.es3 save2.es3
+
+# Built-in dictionary only, single save, JSON output
+python -m src.cli --saves save3.es3 --json
+```
+
+## Project structure
+
+```
+unity-es3-cracker/
+├── main.py                  # Entry point (launches the GUI)
+├── requirements.txt         # Python dependencies
+├── README.md
+├── LICENSE
+├── src/
+│   ├── es3_crypto.py        # ES3 AES encrypt/decrypt / validation / header parsing
+│   ├── candidates.py        # Candidate password harvesting (dnlib + .assets + built-in dict)
+│   ├── cracker.py           # Crack orchestration (single file / batch)
+│   ├── gui.py               # Tkinter GUI
+│   └── cli.py               # Command-line interface
+├── libs/
+│   ├── dnlib.dll            # Open-source .NET assembly parser (extracts DLL strings)
+│   ├── extract_strings.ps1  # PowerShell bridge that invokes dnlib
+│   └── pycryptodome/        # Bundled pycryptodome (Crypto package)
+└── docs/
+    ├── USAGE.md             # Detailed usage guide
+    └── DEVELOPMENT.md       # Development & algorithm notes
+```
+
+## Dependencies
+
+- **dnlib** (MIT, <https://github.com/0xd4d/dnlib>): loaded via `libs/extract_strings.ps1` in PowerShell to extract C# string literals from game DLLs. Windows only; auto-fallback elsewhere.
+- **pycryptodome** (BSD, <https://github.com/Legrandin/pycryptodome>): provides AES / PBKDF2, bundled in `libs/pycryptodome/`, auto-added to `sys.path` at startup.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+---
+
 # Unity Easy Save 3 存档密码破解器
 
 一个用于**逆向破解 Unity 游戏（使用 Easy Save 3 插件）加密存档**的图形化 / 命令行工具。
